@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+@Suppress("DEPRECATION")
 class AlbumsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _albums = MutableStateFlow<List<Album>>(emptyList())
