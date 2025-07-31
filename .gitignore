@@ -1,2 +1,18 @@
 # Project exclude paths
 /.gradle/
+/.idea/.gitignore
+/.idea/AndroidProjectSystem.xml
+/.idea/assetWizardSettings.xml
+/.idea/compiler.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/caches/deviceStreaming.xml
+/.idea/gradle.xml
+/gradlew
+/gradlew.bat
+/local.properties
+/.idea/migrations.xml
+/.idea/misc.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/runConfigurations.xml
+/.idea/studiobot.xml
+/.idea/vcs.xml
