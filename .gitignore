@@ -1,2 +1,12 @@
 # Project exclude paths
-/.gradle/
+.gradle/
+.idea/
+build/
+local.properties
+*.iml
+
+# Sign keys
+*.keystore
+
+# APKs
+*.apk
