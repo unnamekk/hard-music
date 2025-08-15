@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import com.example.hardemusic.data.Album
+import com.example.hardemusic.data.AppText
 import com.example.hardemusic.data.Song
 import com.example.hardemusic.gui.AlphabetScrollbar
 import com.example.hardemusic.gui.ScrollingText
@@ -133,7 +134,7 @@ fun ArtistDetailScreen(
         )
 
         Text(
-            text = "${artistAlbums.size} Álbumes • ${songs.size} Songs • $formattedDuration",
+            text = "${artistAlbums.size} "+ AppText.albumsTitle+ "•  ${songs.size} " + AppText.songsTitle +"• $formattedDuration",
             color = Color.Gray,
             fontSize = 14.sp
         )
@@ -165,14 +166,14 @@ fun ArtistDetailScreen(
             ) {
                 Icon(Icons.Default.Shuffle, contentDescription = null, tint = Color.White,  modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Reproducir Aleatoriamente", color = Color.White,fontSize = 14.sp)
+                Text(AppText.shuffelAlbumButton, color = Color.White,fontSize = 14.sp)
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Álbumes",
+            text = AppText.albumsTitle,
             color = Color.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
@@ -209,7 +210,7 @@ fun ArtistDetailScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Canciones",
+            text = AppText.songsTitle,
             color = Color.White,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold

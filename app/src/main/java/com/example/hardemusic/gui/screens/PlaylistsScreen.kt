@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
+import com.example.hardemusic.data.AppText
 import com.example.hardemusic.data.Playlist
 
 @Composable
@@ -104,7 +105,7 @@ fun PlaylistsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "No tienes playlists",
+                        text = AppText.noPlaylistsTitle,
                         color = Color.Gray,
                         fontSize = 16.sp
                     )
@@ -158,7 +159,6 @@ fun PlaylistsScreen(
 
         if (showDialog) {
             var imageUri by remember { mutableStateOf<Uri?>(null) }
-            val context = LocalContext.current
             val imagePickerLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.GetContent()
             ) { uri: Uri? ->
@@ -167,13 +167,13 @@ fun PlaylistsScreen(
 
             AlertDialog(
                 onDismissRequest = { showDialog = false },
-                title = { Text("Nueva Playlist") },
+                title = { Text(AppText.newPlaylistTitle) },
                 text = {
                     Column {
                         TextField(
                             value = playlistName,
                             onValueChange = { playlistName = it },
-                            placeholder = { Text("Nombre de la playlist") },
+                            placeholder = { Text(AppText.namePlaylistPlaceholder) },
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
@@ -198,7 +198,7 @@ fun PlaylistsScreen(
                             Button(onClick = {
                                 imagePickerLauncher.launch("image/*")
                             }) {
-                                Text("Seleccionar Imagen")
+                                Text(AppText.selectImageButton)
                             }
 
                             Spacer(modifier = Modifier.width(12.dp))
@@ -226,7 +226,7 @@ fun PlaylistsScreen(
                             }
                         }
                     ) {
-                        Text("Crear")
+                        Text(AppText.createButton)
                     }
                 },
                 dismissButton = {
@@ -236,7 +236,7 @@ fun PlaylistsScreen(
                             showDialog = false
                         }
                     ) {
-                        Text("Cancelar")
+                        Text(AppText.cancelButton)
                     }
                 },
                 containerColor = Color(0xFF2C2C2C)
@@ -288,7 +288,7 @@ fun PlaylistItem(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${playlist.songs.size} canciones",
+                    text = "${playlist.songs.size} "+ AppText.songsTitle,
                     fontSize = 14.sp,
                     color = Color.Gray
                 )
@@ -304,14 +304,14 @@ fun PlaylistItem(
                     onDismissRequest = { expanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Editar Playlist") },
+                        text = { Text(AppText.editPlaylistOption) },
                         onClick = {
                             expanded = false
                             showEditDialog = true
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Eliminar Playlist") },
+                        text = { Text(AppText.deleteComPlaylistOption) },
                         onClick = {
                             expanded = false
                             onDelete(playlist)
@@ -355,18 +355,18 @@ fun EditPlaylistDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Editar Playlist") },
+        title = { Text(AppText.editPlaylistOption) },
         text = {
             Column {
                 TextField(
                     value = name,
                     onValueChange = { name = it },
-                    placeholder = { Text("Nombre de la playlist") },
+                    placeholder = { Text(AppText.namePlaylistPlaceholder) },
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { imagePicker.launch("image/*") }) {
-                    Text("Seleccionar imagen")
+                    Text(AppText.selectImageButton)
                 }
 
                 imageUri?.let {
@@ -386,12 +386,12 @@ fun EditPlaylistDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(name.trim(), imageUri) }) {
-                Text("Guardar")
+                Text(AppText.saveButton)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar")
+                Text(AppText.cancelButton)
             }
         }
     )

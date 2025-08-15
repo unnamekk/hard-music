@@ -15,7 +15,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.support.v4.media.session.MediaSessionCompat
-import android.util.Log
 import android.view.LayoutInflater
 import android.widget.ImageView
 import android.widget.TextView
@@ -33,12 +32,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.hardemusic.NotificationHelper.Companion.CHANNEL_ID
+import com.example.hardemusic.data.AppText
 import com.example.hardemusic.data.Song
 import com.example.hardemusic.gui.MainLayout
 import com.example.hardemusic.ui.theme.HardeMusicTheme
 import com.example.hardemusic.viewmodel.MainViewModel
 import com.example.hardemusic.viewmodel.MainViewModel.ViewModelBridge
-
 
 
 @Suppress("DEPRECATION")
@@ -56,8 +55,12 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var noisyReceiver: NoisyAudioReceiver
 
+    private lateinit var editSongLauncher: ActivityResultLauncher<IntentSenderRequest>
+    private var pendingEditedSong: Song? = null
+
+
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    @SuppressLint("UnspecifiedRegisterReceiverFlag", "LocalContextConfigurationRead")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -111,7 +114,7 @@ class MainActivity : ComponentActivity() {
             val allGranted = permissions.values.all { it }
 
             if (allGranted) {
-                showCustomToast(this, "Permisos otorgados correctamente. Reiniciando la app", true)
+                showCustomToast(this, AppText.grantedPermissionsToast, true)
 
                 Handler(Looper.getMainLooper()).postDelayed({
                     val intent = Intent(this, MainActivity::class.java)
@@ -120,7 +123,7 @@ class MainActivity : ComponentActivity() {
                 }, 1000)
 
             } else {
-                showCustomToast(this, "Permisos denegados. Cerrando aplicación", false)
+                showCustomToast(this, AppText.deniedPermissionsToast, false)
 
                 Handler(Looper.getMainLooper()).postDelayed({
                     finishAffinity()
@@ -136,25 +139,48 @@ class MainActivity : ComponentActivity() {
             HardeMusicTheme {
                 val navController = rememberNavController()
                 navControllerRef = navController
-                MainLayout(viewModel = viewModel, navController = navController)
+
+                MainLayout(
+                    viewModel = viewModel,
+                    navController = navController
+                )
             }
         }
 
-        deleteSongLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
-            if (result.resultCode == RESULT_OK) {
-                showCustomToast(this, "Canción eliminada", true)
-                pendingDeleteSong?.let {
-                    navControllerRef?.navigate("home") {
-                        popUpTo(navControllerRef!!.graph.startDestinationId) {
-                            inclusive = true
+
+        deleteSongLauncher =
+            registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+                if (result.resultCode == RESULT_OK) {
+                    showCustomToast(this, AppText.songDeletedToast, true)
+                    pendingDeleteSong?.let {
+                        navControllerRef?.navigate("home") {
+                            popUpTo(navControllerRef!!.graph.startDestinationId) {
+                                inclusive = true
+                            }
                         }
                     }
+                } else {
+                    showCustomToast(this, AppText.songNotDeletedToast, false)
                 }
-            } else {
-                showCustomToast(this, "No se pudo eliminar la canción", false)
+                pendingDeleteSong = null
             }
-            pendingDeleteSong = null
-        }
+
+        editSongLauncher =
+            registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+                if (result.resultCode == RESULT_OK) {
+                    pendingEditedSong?.let { song ->
+                        viewModel.updateSong(this, song)
+                        navControllerRef?.navigate("calendar") {
+                            popUpTo(navControllerRef!!.graph.startDestinationId) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                } else {
+                    showCustomToast(this, AppText.notEditionToast, false)
+                }
+                pendingEditedSong = null
+            }
 
         noisyReceiver = NoisyAudioReceiver()
         val noisyFilter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
@@ -239,6 +265,35 @@ class MainActivity : ComponentActivity() {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
+    fun requestEditPermission(song: Song) {
+        try {
+            val uri = song.uri
+            val pendingIntent = MediaStore.createWriteRequest(contentResolver, listOf(uri))
+            val request = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+            pendingEditedSong = song
+            editSongLauncher.launch(request)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            showCustomToast(this, AppText.errorPermissionToast, false)
+        }
+    }
+
+    var pendingEditedSongs: List<Song>? = null
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    val editMultipleSongsLauncher =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                pendingEditedSongs?.let { songs ->
+                    viewModel.updateSongs(this, songs)
+                }
+            } else {
+                showCustomToast(this, AppText.notEditionSongsToast, false)
+            }
+            pendingEditedSongs = null
+        }
+
+    @RequiresApi(Build.VERSION_CODES.R)
     fun deleteSongAndRefresh(song: Song) {
         try {
             val uri = song.uri
@@ -248,7 +303,7 @@ class MainActivity : ComponentActivity() {
             deleteSongLauncher.launch(request)
         } catch (e: Exception) {
             e.printStackTrace()
-            showCustomToast(this, "Error al intentar eliminar", false)
+            showCustomToast(this, AppText.songNotDeletedToast, false)
         }
     }
 
@@ -266,7 +321,8 @@ class MainActivity : ComponentActivity() {
             manager.createNotificationChannel(channel)
         }
     }
-
 }
+
+
 
 

@@ -2,38 +2,55 @@ package com.example.hardemusic.viewmodel
 
 import android.annotation.SuppressLint
 import android.app.Application
+import android.app.RecoverableSecurityException
 import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Log
+import androidx.activity.result.IntentSenderRequest
+import androidx.annotation.RequiresApi
 import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hardemusic.MainActivity
 import com.example.hardemusic.NotificationHelper
+import com.example.hardemusic.data.AppText
+import com.example.hardemusic.data.DayEntry
 import com.example.hardemusic.data.HistoryStorage
+import com.example.hardemusic.data.MonthEntry
 import com.example.hardemusic.data.Song
+import com.mpatric.mp3agic.ID3v24Tag
+import com.mpatric.mp3agic.Mp3File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.Month
+import java.time.Year
 import java.time.ZoneId
+
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -76,18 +93,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val historyStorage = HistoryStorage(application)
 
+    private val _downloadedSongsByMonth = MutableStateFlow<List<MonthEntry>>(emptyList())
+    val downloadedSongsByMonth = _downloadedSongsByMonth.asStateFlow()
+
+    private val _selectedSongsForDay = MutableStateFlow<List<Song>>(emptyList())
+    val selectedSongsForDay = _selectedSongsForDay.asStateFlow()
 
     private val _recentSongs = MutableStateFlow<List<Song>>(emptyList())
     val recentSongs: StateFlow<List<Song>> = _recentSongs
 
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
-    val songsList: StateFlow<List<Song>> = _songs
-        .map { list -> list.sortedBy { it.title.lowercase() } }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Eagerly,
-            emptyList()
-        )
 
     private var currentAlbumSongs: List<Song> = emptyList()
 
@@ -102,12 +117,60 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val preferences =
         getApplication<Application>().getSharedPreferences("player_prefs", Context.MODE_PRIVATE)
 
+    private val _hasNowPlayingBarAppeared = MutableStateFlow(false)
+    val hasNowPlayingBarAppeared: StateFlow<Boolean> = _hasNowPlayingBarAppeared
+
+    private val _playbackQueue = MutableStateFlow<List<Song>>(emptyList())
+    val playbackQueue: StateFlow<List<Song>> = _playbackQueue
+
+    private val currentPlaybackQueue: List<Song>
+        get() = _playbackQueue.value
+
+    private val playbackHistory = mutableListOf<Int>()
+
+    private val _currentIndex = MutableStateFlow(0)
+    val currentIndexFlow: StateFlow<Int> = _currentIndex
+
+    private var currentContextSongs: List<Song>? = null
+    private var currentArtistName: String? = null
+
+    private val _editingSongs = MutableStateFlow<List<Song>>(emptyList())
+    val editingSongs: StateFlow<List<Song>> = _editingSongs
+
+    private var shouldPlayNext = true
+
+    private val _editingSong = MutableStateFlow<Song?>(null)
+    val editingSong: StateFlow<Song?> = _editingSong
+
+    private var currentPlaylistName: String? = null
+
+    private val _excludeWhatsApp = MutableStateFlow(
+        preferences.getBoolean("exclude_whatsapp", false)
+    )
+
+    val excludeWhatsApp: StateFlow<Boolean> = _excludeWhatsApp
+
+    private val _language = MutableStateFlow("Es")
+    val language: StateFlow<String> = _language
+
+    val songsList: StateFlow<List<Song>> = _songs
+        .map { list -> list.sortedBy { it.title.lowercase() } }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            emptyList()
+        )
+
     init {
         loadSongs()
         loadHistoryFromStorage()
         ViewModelBridge.mainViewModel = this
         _shuffleMode.value = preferences.getBoolean("shuffle_mode", false)
         _repeatMode.value = preferences.getInt("repeat_mode", 0)
+
+        val savedLang = preferences.getString("language", "Es") ?: "Es"
+        _language.value = savedLang
+        AppText.language = savedLang
 
         viewModelScope.launch {
             delay(100)
@@ -124,15 +187,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private val _hasNowPlayingBarAppeared = MutableStateFlow(false)
-    val hasNowPlayingBarAppeared: StateFlow<Boolean> = _hasNowPlayingBarAppeared
-
     fun markNowPlayingBarAsAppeared() {
         _hasNowPlayingBarAppeared.value = true
     }
 
     fun markNowPlayingBarAsNotAppeared() {
         _hasNowPlayingBarAppeared.value = false
+    }
+
+    fun setExcludeWhatsApp(exclude: Boolean) {
+        _excludeWhatsApp.value = exclude
+        preferences.edit().putBoolean("exclude_whatsapp", exclude).apply()
+        loadSongs()
+    }
+
+    fun setLanguage(langCode: String) {
+        _language.value = langCode
+        AppText.language = langCode
+        preferences.edit().putString("language", langCode).apply()
     }
 
     fun loadSongs() {
@@ -149,6 +221,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val albumIdColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val dateAddedColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
             val trackColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
+            val albumArtistColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ARTIST)
+            val yearColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
+            val albumColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
 
             while (it.moveToNext()) {
                 val id = it.getLong(idColumn)
@@ -156,7 +231,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val title = it.getString(titleColumn)
                 val artist = it.getString(artistColumn)
                 val rawTrackNumber = it.getInt(trackColumn)
+                val albumArtist = it.getString(albumArtistColumn)
+                val year = it.getInt(yearColumn)
                 val trackNumber = rawTrackNumber % 1000
+                val albumName = it.getString(albumColumn)
+                val pathColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+                val path = it.getString(pathColumn)
 
                 val dateAddedSeconds = it.getLong(dateAddedColumn)
                 val timestamp = LocalDateTime.ofInstant(
@@ -165,6 +245,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
 
                 val albumId = it.getLong(albumIdColumn)
+
+                if (_excludeWhatsApp.value && path.contains("WhatsApp/Media/WhatsApp Audio")) {
+                    continue
+                }
 
                 val albumArtUri = "content://media/external/audio/albumart/$albumId".toUri()
                 loadedSongs.add(
@@ -175,7 +259,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         timestamp,
                         albumArtUri,
                         trackNumber = trackNumber,
-                        albumId = albumId
+                        albumId = albumId,
+                        albumArtist = albumArtist,
+                        year = year,
+                        albumName = albumName,
+                        path=path
                     )
                 )
             }
@@ -217,22 +305,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private val _playbackQueue = MutableStateFlow<List<Song>>(emptyList())
-    val playbackQueue: StateFlow<List<Song>> = _playbackQueue
+    fun setEditingSong(song: Song) {
+        val fullSong = _songs.value.find { it.uri == song.uri } ?: song
 
-    private val currentPlaybackQueue: List<Song>
-        get() = _playbackQueue.value
+        Log.e("setEditingSong", "AQUIIIIIIII Usando canción: albumArtist=${fullSong.albumArtist}, year=${fullSong.year}, track=${fullSong.trackNumber}")
 
-    private val playbackHistory = mutableListOf<Int>()
-
-    private val _currentIndex = MutableStateFlow(0)
-    val currentIndexFlow: StateFlow<Int> = _currentIndex
-
-    private var currentContextSongs: List<Song>? = null
-    private var currentArtistName: String? = null
-
-    private var shouldPlayNext = true
-
+        _editingSong.value = fullSong
+    }
 
     private fun reorderPlaybackQueueAfterShuffleToggle() {
         val current = _currentSong.value ?: return
@@ -414,8 +493,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         saveCurrentPlaybackState()
     }
 
-    private var currentPlaylistName: String? = null
-
     fun playFrom(
         song: Song,
         albumSongs: List<Song>? = null,
@@ -481,14 +558,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     putString("last_context", "album")
                     putLong("last_album_id", song.albumId ?: -1L)
                 }
+
                 "artist" -> {
                     putString("last_context", "artist")
                     putString("last_artist_name", artistName)
                 }
+
                 "playlist" -> {
                     putString("last_context", "playlist")
                     putString("last_playlist_name", playlistName)
                 }
+
                 else -> {
                     putString("last_context", "none")
                 }
@@ -519,7 +599,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val insertIndex = (current + 1).coerceAtMost(queue.size)
         queue.add(insertIndex, song)
         _playbackQueue.value = queue
-        toast.showCustomToast(getApplication(), "Canción agregada a la cola", true)
+        toast.showCustomToast(getApplication(), AppText.songQueueToast, true)
     }
 
     fun toggleShuffleMode() {
@@ -552,12 +632,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             putInt("last_position", position)
 
             putLong("last_album_id", song.albumId ?: -1L)
-            putString("last_context", when {
-                currentPlaylistName != null -> "playlist"
-                currentArtistName != null -> "artist"
-                !currentAlbumSongs.isNullOrEmpty() -> "album"
-                else -> "none"
-            })
+            putString(
+                "last_context", when {
+                    currentPlaylistName != null -> "playlist"
+                    currentArtistName != null -> "artist"
+                    !currentAlbumSongs.isNullOrEmpty() -> "album"
+                    else -> "none"
+                }
+            )
             putString("last_artist_name", currentArtistName)
             putString("last_playlist_name", currentPlaylistName)
 
@@ -593,6 +675,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             "album" -> albumId?.let { id ->
                 songsList.value.filter { it.albumId == id }
             }
+
             "artist" -> songsList.value.filter { it.artist == song.artist }
             else -> null
         }
@@ -716,4 +799,277 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun loadDownloadedSongsGroupedByDate(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val contentResolver = context.contentResolver
+            val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+
+            val projection = arrayOf(
+                MediaStore.Audio.Media._ID,
+                MediaStore.Audio.Media.TITLE,
+                MediaStore.Audio.Media.ARTIST,
+                MediaStore.Audio.Media.ALBUM,
+                MediaStore.Audio.Media.ALBUM_ARTIST,
+                MediaStore.Audio.Media.YEAR,
+                MediaStore.Audio.Media.TRACK,
+                MediaStore.Audio.Media.IS_MUSIC,
+                MediaStore.Audio.Media.DATE_ADDED,
+                MediaStore.Audio.Media.ALBUM_ID
+            )
+
+
+            val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+            val sortOrder = "${MediaStore.Audio.Media.DATE_ADDED} DESC"
+
+            val cursor = contentResolver.query(uri, projection, selection, null, sortOrder)
+
+            val allSongs = mutableListOf<Song>()
+
+            cursor?.use {
+                val titleColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+                val artistColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                val idColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val albumIdColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+                val dateAddedColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+                val trackColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
+                val albumArtistColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ARTIST)
+                val yearColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
+                val albumColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+
+                while (it.moveToNext()) {
+                    val id = it.getLong(idColumn)
+                    val songUri = Uri.withAppendedPath(uri, id.toString())
+                    val title = it.getString(titleColumn)
+                    val artist = it.getString(artistColumn)
+                    val rawTrackNumber = it.getInt(trackColumn)
+                    val albumArtist = it.getString(albumArtistColumn)
+                    val year = it.getInt(yearColumn)
+                    val trackNumber = rawTrackNumber % 1000
+                    val albumName = it.getString(albumColumn)
+
+                    val dateAddedSeconds = it.getLong(dateAddedColumn)
+                    val timestamp = LocalDateTime.ofInstant(
+                        Instant.ofEpochSecond(dateAddedSeconds),
+                        ZoneId.systemDefault()
+                    )
+
+                    val albumId = it.getLong(albumIdColumn)
+                    val albumArtUri = ContentUris.withAppendedId(
+                        "content://media/external/audio/albumart".toUri(),
+                        albumId
+                    )
+
+                    allSongs.add(
+                        Song(
+                            title,
+                            artist,
+                            songUri,
+                            timestamp,
+                            albumArtUri,
+                            trackNumber = trackNumber,
+                            albumId = albumId,
+                            albumArtist = albumArtist,
+                            year = year,
+                            albumName = albumName
+                        )
+                    )
+                }
+            }
+
+            val groupedByDay = allSongs.groupBy { it.timestamp.toLocalDate() }
+
+            val months = groupedByDay
+                .keys
+                .map { it.withDayOfMonth(1) }
+                .distinct()
+
+            val fullMonthEntries = months.map { month ->
+                val year = month.year
+                val monthValue = month.monthValue
+                val daysInMonth = Month.of(monthValue).length(Year.of(year).isLeap)
+
+                val dayEntries = (1..daysInMonth).map { day ->
+                    val date = LocalDate.of(year, monthValue, day)
+                    val songsForDay = groupedByDay[date] ?: emptyList()
+                    DayEntry(day = day, songs = songsForDay)
+                }
+
+                MonthEntry(year = year, month = monthValue, days = dayEntries)
+            }.sortedByDescending { it.year * 100 + it.month }
+
+            _downloadedSongsByMonth.value = fullMonthEntries
+        }
+    }
+
+    fun setSelectedSongsForDay(songs: List<Song>) {
+        _selectedSongsForDay.value = songs
+    }
+
+    fun setEditingSongs(songs: List<Song>) {
+        _editingSongs.value = songs
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun updateSong(context: Context, updated: Song) {
+        val uri = updated.uri
+
+        try {
+            val fileDescriptor = context.contentResolver.openFileDescriptor(uri, "rw") ?: return
+            val filePath = "/proc/self/fd/${fileDescriptor.fd}"
+            val extension = context.contentResolver.getType(uri)?.substringAfterLast('/')?.lowercase()
+                ?: uri.toString().substringAfterLast('.').lowercase()
+
+            if (extension.contains("mpeg") || uri.toString().endsWith(".mp3")) {
+                val mp3 = Mp3File(filePath)
+
+                val newTag = if (mp3.hasId3v2Tag()) mp3.id3v2Tag else ID3v24Tag()
+
+                newTag.title = updated.title
+                newTag.artist = updated.artist
+                newTag.album = updated.albumName ?: ""
+                newTag.albumArtist = updated.albumArtist ?: ""
+                newTag.track = updated.trackNumber?.toString()
+                newTag.year = updated.year?.toString()
+
+                updated.albumArtUri?.let { artUri ->
+                    val imageBytes = context.contentResolver.openInputStream(artUri)?.use { it.readBytes() }
+                    if (imageBytes != null) {
+                        val mimeType = context.contentResolver.getType(artUri) ?: "image/jpeg"
+                        newTag.setAlbumImage(imageBytes, mimeType)
+                    }
+                }
+
+                mp3.id3v2Tag = newTag
+
+                val tempFile = File.createTempFile("edited", ".mp3", context.cacheDir)
+                mp3.save(tempFile.absolutePath)
+
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    tempFile.inputStream().use { input ->
+                        input.copyTo(output)
+                    }
+                }
+
+                tempFile.delete()
+
+                _songs.value = _songs.value.map { if (it.uri == updated.uri) updated else it }
+                _selectedSongsForDay.value = _selectedSongsForDay.value.map { if (it.uri == updated.uri) updated else it }
+
+                loadSongs()
+                loadDownloadedSongsGroupedByDate(context)
+
+                if (context is MainActivity) {
+                    context.showCustomToast(context, AppText.songSuccessToast, true)
+                }
+            } else {
+                Log.w("UpdateSong", "Formato no soportado: $extension")
+                if (context is MainActivity) {
+                    context.showCustomToast(context, AppText.notSupportedToast, false)
+                }
+            }
+
+        } catch (e: RecoverableSecurityException) {
+            if (context is MainActivity) {
+                context.showCustomToast(context, AppText.requiredPermissionToast, false)
+                context.requestEditPermission(updated)
+            }
+        } catch (e: Exception) {
+            if (context is MainActivity) {
+                context.showCustomToast(context, AppText.errorUpdateToast, false)
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    fun updateSongs(context: Context, updatedSongs: List<Song>) {
+        try {
+            if (context is MainActivity) {
+                val urisWithoutPermission = updatedSongs.map { it.uri }
+                    .filter { uri ->
+                        context.checkUriPermission(uri, android.os.Process.myPid(), android.os.Process.myUid(), Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != PackageManager.PERMISSION_GRANTED
+                    }
+
+                if (urisWithoutPermission.isNotEmpty()) {
+                    val pendingIntent = MediaStore.createWriteRequest(context.contentResolver, urisWithoutPermission)
+                    val request = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+                    context.pendingEditedSongs = updatedSongs
+                    context.editMultipleSongsLauncher.launch(request)
+                    return
+                }
+            }
+
+            updatedSongs.forEach { updated ->
+                val uri = updated.uri
+
+                try {
+                    val fileDescriptor = context.contentResolver.openFileDescriptor(uri, "rw") ?: return@forEach
+                    val filePath = "/proc/self/fd/${fileDescriptor.fd}"
+                    val extension = context.contentResolver.getType(uri)?.substringAfterLast('/')?.lowercase()
+                        ?: uri.toString().substringAfterLast('.').lowercase()
+
+                    if (extension.contains("mpeg") || uri.toString().endsWith(".mp3")) {
+                        val mp3 = Mp3File(filePath)
+
+                        val newTag = if (mp3.hasId3v2Tag()) mp3.id3v2Tag else ID3v24Tag()
+
+                        newTag.title = updated.title.toString()
+                        newTag.artist = updated.artist.toString()
+                        newTag.album = updated.albumName?.toString() ?: ""
+                        newTag.albumArtist = updated.albumArtist?.toString() ?: ""
+                        newTag.track = updated.trackNumber?.toString() ?: ""
+                        newTag.year = updated.year?.toString() ?: ""
+
+                        updated.albumArtUri?.let { artUri ->
+                            val imageBytes = context.contentResolver.openInputStream(artUri)?.use { it.readBytes() }
+                            if (imageBytes != null) {
+                                val mimeType = context.contentResolver.getType(artUri) ?: "image/jpeg"
+                                newTag.setAlbumImage(imageBytes, mimeType)
+                            }
+                        }
+
+                        mp3.id3v2Tag = newTag
+
+                        val tempFile = File.createTempFile("edited", ".mp3", context.cacheDir)
+                        mp3.save(tempFile.absolutePath)
+
+                        context.contentResolver.openOutputStream(uri)?.use { output ->
+                            tempFile.inputStream().use { input ->
+                                input.copyTo(output)
+                            }
+                        }
+
+                        tempFile.delete()
+
+                        _songs.value = _songs.value.map { if (it.uri == updated.uri) updated else it }
+                        _selectedSongsForDay.value = _selectedSongsForDay.value.map { if (it.uri == updated.uri) updated else it }
+
+                    }
+
+                } catch (e: RecoverableSecurityException) {
+                    if (context is MainActivity) {
+                        context.showCustomToast(context, AppText.requiredPermissionToast, false)
+                        context.requestEditPermission(updated)
+                    }
+                } catch (e: Exception) {
+                    if (context is MainActivity) {
+                        context.showCustomToast(context, AppText.errorUpdateToast, false)
+                    }
+                }
+            }
+
+            loadSongs()
+            loadDownloadedSongsGroupedByDate(context)
+
+            if (context is MainActivity) {
+                context.showCustomToast(context, AppText.SuccessSongsToast, true)
+            }
+
+        } catch (e: Exception) {
+            if (context is MainActivity) {
+                context.showCustomToast(context, AppText.errorUpdatesToast, false)
+            }
+        }
+    }
+
 }

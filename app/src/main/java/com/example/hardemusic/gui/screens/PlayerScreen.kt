@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -44,13 +45,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.hardemusic.gui.ScrollingText
 import com.example.hardemusic.gui.SongOptionsMenu
+import com.example.hardemusic.gui.rememberSongArtwork
 import com.example.hardemusic.viewmodel.MainViewModel
 
 @SuppressLint("DefaultLocale", "StateFlowValueCalledInComposition")
@@ -69,6 +73,9 @@ fun PlayerScreen(viewModel: MainViewModel,navController: NavHostController, onBa
             viewModel.markNowPlayingBarAsNotAppeared()
         }
     }
+
+    val context = LocalContext.current
+    val artworkModel = rememberSongArtwork(context, currentSong)
 
     currentSong?.let { song ->
         Column(
@@ -89,15 +96,24 @@ fun PlayerScreen(viewModel: MainViewModel,navController: NavHostController, onBa
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Image(
-                    painter = rememberAsyncImagePainter(song.albumArtUri),
-                    contentDescription = "Carátula",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(0.9f)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                if (artworkModel != null) {
+                    AsyncImage(
+                        model = artworkModel,
+                        contentDescription = "Carátula",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(0.9f)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }else {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(250.dp),
+                        tint = Color.Gray
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 

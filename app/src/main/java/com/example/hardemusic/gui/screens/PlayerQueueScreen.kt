@@ -34,6 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.example.hardemusic.data.AppText
 import com.example.hardemusic.data.Song
 import com.example.hardemusic.viewmodel.MainViewModel
 
@@ -70,7 +71,7 @@ fun PlayerQueueScreen(
                 )
             }
             Text(
-                text = "Cola de reproducción",
+                text = AppText.queueTitle,
                 color = Color.White,
                 fontSize = 20.sp,
                 modifier = Modifier.padding(start = 8.dp)

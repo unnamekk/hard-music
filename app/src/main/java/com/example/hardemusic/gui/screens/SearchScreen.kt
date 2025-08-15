@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.hardemusic.data.Album
+import com.example.hardemusic.data.AppText
 import com.example.hardemusic.data.Artist
 import com.example.hardemusic.data.Song
 import com.example.hardemusic.viewmodel.MainViewModel
@@ -73,7 +74,7 @@ fun SearchScreen(
         OutlinedTextField(
             value = query,
             onValueChange = { searchViewModel.updateQuery(it) },
-            label = { Text("Buscar...") },
+            label = { Text(AppText.searchPlaceholder) },
             trailingIcon = {
                 if (query.isNotEmpty()) {
                     IconButton(onClick = { searchViewModel.clearQuery() }) {
@@ -127,10 +128,10 @@ fun SearchScreen(
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (filterType == SearchFilterType.ALL || filterType == SearchFilterType.SONGS) {
                 if (filteredSongs.isNotEmpty()) {
-                    item { Text("CANCIONES", fontWeight = FontWeight.Bold, color = Color(0xFF00BFFF)) }
+                    item { Text(AppText.songsTitle, fontWeight = FontWeight.Bold, color = Color(0xFF00BFFF)) }
                     items(filteredSongs) { song ->
                         SongItem(song = song, onClick = {
-                            mainViewModel.playFromQueue(song)
+                            mainViewModel.playFrom(song)
                         })
                     }
                 }
@@ -138,7 +139,7 @@ fun SearchScreen(
 
             if (filterType == SearchFilterType.ALL || filterType == SearchFilterType.ARTISTS) {
                 if (filteredArtists.isNotEmpty()) {
-                    item { Text("ARTISTAS", fontWeight = FontWeight.Bold, color = Color(0xFF00BFFF)) }
+                    item { Text(AppText.artistsTitle, fontWeight = FontWeight.Bold, color = Color(0xFF00BFFF)) }
                     items(filteredArtists) { artist ->
                         ArtistItem(artist = artist, onClick = {
                             navController.navigate("artist_detail/${artist.name}")
@@ -149,7 +150,7 @@ fun SearchScreen(
 
             if (filterType == SearchFilterType.ALL || filterType == SearchFilterType.ALBUMS) {
                 if (filteredAlbums.isNotEmpty()) {
-                    item { Text("ÁLBUMES", fontWeight = FontWeight.Bold, color = Color(0xFF00BFFF)) }
+                    item { Text(AppText.albumsTitle, fontWeight = FontWeight.Bold, color = Color(0xFF00BFFF)) }
                     items(filteredAlbums) { album ->
                         AlbumItem(album = album, onClick = {
                             navController.navigate("album_detail/${album.id}")

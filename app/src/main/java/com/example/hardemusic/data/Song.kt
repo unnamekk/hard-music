@@ -10,5 +10,9 @@ data class Song(
     val timestamp: LocalDateTime = LocalDateTime.now(),
     val albumArtUri: Uri? = null,
     val trackNumber: Int? = null,
-    val albumId: Long? = null
+    val albumId: Long? = null,
+    val albumArtist: String? = null,
+    val year: Int? = null,
+    val albumName: String? = null,
+    val path: String? = null
 )

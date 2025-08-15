@@ -4,6 +4,7 @@ coilCompose = "2.4.0"
 datastorePreferences = "1.1.7"
 foundation = "1.8.3"
 gson = "2.11.0"
+jaudiotagger = "2.0.3"
 kotlin = "2.0.21"
 coreKtx = "1.10.1"
 junit = "4.13.2"
@@ -15,8 +16,10 @@ composeBom = "2024.09.00"
 lifecycleRuntimeKtxVersion = "2.6.2"
 materialIconsExtended = "1.7.8"
 media = "1.7.0"
+mp3agic = "0.9.1"
 navigationCompose = "2.9.0"
 toolsCore = "1.0.0-alpha13"
+media3CommonKtx = "1.8.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,6 +31,7 @@ androidx-media = { module = "androidx.media:media", version.ref = "media" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+jaudiotagger = { module = "org.jaudiotagger:jaudiotagger", version = "2.0.1" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -42,6 +46,8 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-tools-core = { group = "androidx.privacysandbox.tools", name = "tools-core", version.ref = "toolsCore" }
+mp3agic = { module = "com.mpatric:mp3agic", version.ref = "mp3agic" }
+androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3CommonKtx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

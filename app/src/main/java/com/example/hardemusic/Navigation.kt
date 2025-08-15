@@ -2,10 +2,14 @@ package com.example.hardemusic
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -17,7 +21,10 @@ import com.example.hardemusic.gui.screens.AlbumGroupDetailScreen
 import com.example.hardemusic.gui.screens.AlbumsScreen
 import com.example.hardemusic.gui.screens.ArtistDetailScreen
 import com.example.hardemusic.gui.screens.ArtistsScreen
+import com.example.hardemusic.gui.screens.CalendarScreen
 import com.example.hardemusic.gui.screens.DailyHistoryScreen
+import com.example.hardemusic.gui.screens.EditMultipleSongsScreen
+import com.example.hardemusic.gui.screens.EditSongScreen
 import com.example.hardemusic.gui.screens.MainScreen
 import com.example.hardemusic.gui.screens.PlayerQueueScreen
 import com.example.hardemusic.gui.screens.PlayerScreen
@@ -25,6 +32,8 @@ import com.example.hardemusic.gui.screens.PlaylistDetailScreen
 import com.example.hardemusic.gui.screens.PlaylistsScreen
 import com.example.hardemusic.gui.screens.RecentlyAddedScreen
 import com.example.hardemusic.gui.screens.SearchScreen
+import com.example.hardemusic.gui.screens.SettingsScreen
+import com.example.hardemusic.gui.screens.SongSelectionScreen
 import com.example.hardemusic.gui.screens.SongsScreen
 import com.example.hardemusic.viewmodel.AlbumsViewModel
 import com.example.hardemusic.viewmodel.ArtistsViewModel
@@ -33,6 +42,8 @@ import com.example.hardemusic.viewmodel.PlaylistViewModel
 import com.example.hardemusic.viewmodel.SearchViewModel
 import com.example.hardemusic.viewmodel.UserProfileViewModel
 
+
+@RequiresApi(Build.VERSION_CODES.R)
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun AppNavigation(
@@ -67,6 +78,10 @@ fun AppNavigation(
             RecentlyAddedScreen(viewModel = viewModel,navController = navController, onBack = { navController.popBackStack() })
         }
 
+        composable("settings") {
+            SettingsScreen(viewModel = viewModel, navController = navController, albumsViewModel = albumsViewModel)
+        }
+
         composable("songs") { SongsScreen(viewModel, navController) }
 
         composable("albums") {
@@ -86,6 +101,73 @@ fun AppNavigation(
                 navController = navController
             )
         }
+
+        composable("calendar") {
+            val context = LocalContext.current
+            CalendarScreen(viewModel = viewModel, context = context, navController = navController)
+        }
+
+        composable(
+            route = "day_songs/{date}",
+            arguments = listOf(navArgument("date") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val date = backStackEntry.arguments?.getString("date") ?: ""
+            SongSelectionScreen(date = date, viewModel = viewModel, navController = navController) {
+                navController.popBackStack()
+            }
+        }
+
+        composable("edit_song") {
+            albumsViewModel.loadAlbums()
+            val song = viewModel.editingSong.collectAsState().value
+            val albums by albumsViewModel.albums.collectAsState()
+            val context = LocalContext.current
+
+            if (song != null && albums.isNotEmpty()) {
+                EditSongScreen(
+                    song = song,
+                    albums = albums,
+                    onSave = { updatedSong ->
+                        viewModel.updateSong(context, updatedSong)
+                        navController?.navigate("calendar") {
+                            popUpTo(navController!!.graph.startDestinationId) {
+                                inclusive = true
+                            }
+                        }
+                    },
+                    navController = navController,
+                    onBack = {
+                        navController.navigate("calendar")
+                    }
+                )
+            }
+        }
+
+        composable("edit_multiple_songs") {
+            albumsViewModel.loadAlbums()
+            val songs = viewModel.editingSongs.collectAsState().value
+            val albums by albumsViewModel.albums.collectAsState()
+            val context = LocalContext.current
+
+            if (songs.isNotEmpty()) {
+                EditMultipleSongsScreen(
+                    songs = songs,
+                    albums = albums,
+                    onSave = { updatedSongs ->
+                        viewModel.updateSongs(context, updatedSongs)
+                        navController?.navigate("calendar") {
+                            popUpTo(navController!!.graph.startDestinationId) {
+                                inclusive = true
+                            }
+                        }
+                    },
+                    onBack = {
+                        navController.navigate("calendar")
+                    }
+                )
+            }
+        }
+
 
         composable(
             route = "artist_detail/{artistName}",
@@ -198,9 +280,6 @@ fun AppNavigation(
                 mainViewModel = viewModel,navController, viewModel.hasNowPlayingBarAppeared.value
             )
         }
-
-
     }
-
 
 }

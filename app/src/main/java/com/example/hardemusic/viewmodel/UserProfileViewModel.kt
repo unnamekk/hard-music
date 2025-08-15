@@ -8,11 +8,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.example.hardemusic.data.UserProfileStorage
+import com.example.hardemusic.data.AppText
 
 class UserProfileViewModel(application: Application) : AndroidViewModel(application) {
     private val storage = UserProfileStorage(application)
 
-    private val _name = MutableStateFlow("Edit me!!!")
+    private val _name = MutableStateFlow(AppText.namePlaceholder)
     val name: StateFlow<String> = _name.asStateFlow()
 
     private val _imageUri = MutableStateFlow<Uri?>(null)

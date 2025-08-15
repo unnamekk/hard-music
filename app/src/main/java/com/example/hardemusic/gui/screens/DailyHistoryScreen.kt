@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavController
+import com.example.hardemusic.data.AppText
 import com.example.hardemusic.gui.SongListView
 import com.example.hardemusic.viewmodel.MainViewModel
 
@@ -18,6 +19,6 @@ fun DailyHistoryScreen(viewModel: MainViewModel, navController: NavController, o
             viewModel.playFrom(it)
             onBack()
         }, viewModel, navController,
-        showTitle = "Historial de hoy"
+        showTitle = AppText.HistoryTitle
     )
 }

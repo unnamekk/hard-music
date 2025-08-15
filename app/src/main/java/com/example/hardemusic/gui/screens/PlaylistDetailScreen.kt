@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.hardemusic.data.AppText
 import com.example.hardemusic.gui.AlphabetScrollbar
 import com.example.hardemusic.gui.SongRow
 import com.example.hardemusic.viewmodel.MainViewModel
@@ -57,7 +58,7 @@ fun PlaylistDetailScreen(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Agrega alguna canción a la playlist",
+                text = AppText.addSongstoPlaylistTitle,
                 color = Color.Gray,
                 fontSize = 16.sp
             )

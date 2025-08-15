@@ -1,8 +1,10 @@
 package com.example.hardemusic.gui
 
 import android.app.Application
+import android.content.Context
 import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -48,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -70,6 +74,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.example.hardemusic.AppNavigation
@@ -77,18 +82,21 @@ import com.example.hardemusic.MainActivity
 import com.example.hardemusic.R
 import com.example.hardemusic.data.PlaylistViewModelFactory
 import com.example.hardemusic.data.Song
+import com.example.hardemusic.gui.screens.loadEmbeddedPictureBytes
 import com.example.hardemusic.viewmodel.MainViewModel
 import com.example.hardemusic.viewmodel.PlaylistViewModel
 import kotlinx.coroutines.launch
+import com.example.hardemusic.data.AppText
 
 
+@RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun MainLayout(viewModel: MainViewModel, navController: NavHostController) {
     val currentSong by viewModel.currentSong.collectAsState()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val hideBottomBarRoutes = listOf("historial", "añadidos")
+    val hideBottomBarRoutes = listOf("historial", "añadidos", "settings")
     val showBottomBar = currentRoute !in hideBottomBarRoutes
     val showTopBar = currentRoute !in hideBottomBarRoutes
 
@@ -102,9 +110,9 @@ fun MainLayout(viewModel: MainViewModel, navController: NavHostController) {
             }
         }
 
-        "songs" -> buildAnnotatedString { append("Canciones") }
-        "albums" -> buildAnnotatedString { append("Álbumes") }
-        "artists" -> buildAnnotatedString { append("Artistas") }
+        "songs" -> buildAnnotatedString { append(AppText.songsTitle) }
+        "albums" -> buildAnnotatedString { append(AppText.albumsTitle) }
+        "artists" -> buildAnnotatedString { append(AppText.artistsTitle) }
         "playlists" -> buildAnnotatedString { append("Playlists") }
         else -> null
     }
@@ -204,9 +212,9 @@ fun TopBar(title: AnnotatedString, navController: NavHostController) {
                 tint = Color.White,
                 modifier = Modifier
                     .size(24.dp)
-                    /*.clickable {
+                    .clickable {
                         navController.navigate("calendar")
-                    }*/
+                    }
             )
 
             Icon(
@@ -215,9 +223,9 @@ fun TopBar(title: AnnotatedString, navController: NavHostController) {
                 tint = Color.White,
                 modifier = Modifier
                     .size(24.dp)
-                    /*.clickable {
+                    .clickable {
                         navController.navigate("settings")
-                    }*/
+                    }
             )
         }
     }
@@ -227,8 +235,18 @@ fun TopBar(title: AnnotatedString, navController: NavHostController) {
 fun NowPlayingBar(viewModel: MainViewModel, navController: NavHostController) {
     val currentSong by viewModel.currentSong.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
+    val context = LocalContext.current
 
     currentSong?.let { song ->
+
+        val artworkModel = rememberSongArtwork(context, currentSong)
+
+        val imageModel: Any? = when {
+            artworkModel != null -> artworkModel
+            song.albumArtUri != null -> song.albumArtUri
+            else -> null
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -247,13 +265,24 @@ fun NowPlayingBar(viewModel: MainViewModel, navController: NavHostController) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Image(
-                        painter = rememberAsyncImagePainter(song.albumArtUri),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                    )
+                    if (imageModel != null) {
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(6.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = Color.Gray
+                        )
+                    }
+
                     Spacer(modifier = Modifier.width(8.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Box(
@@ -387,7 +416,7 @@ fun SongListView(
         }
 
         if (songs.isEmpty()) {
-            Text("No hay canciones disponibles.", color = Color.Gray)
+            Text(AppText.noSongsTitle, color = Color.Gray)
         } else {
             if (groupByInitial) {
                 val grouped = songs.groupBy { it.title.firstOrNull()?.uppercaseChar() ?: '#' }
@@ -511,6 +540,7 @@ fun SongRow(
     }
 }
 
+
 @Composable
 fun SongOptionsMenu(
     expanded: Boolean,
@@ -539,7 +569,7 @@ fun SongOptionsMenu(
 
         if (hasNowPlayingBarAppeared && currentRoute !in hideNowRoutes) {
             DropdownMenuItem(
-                text = { Text("Poner como siguiente") },
+                text = { Text(AppText.nextQueueOption) },
                 onClick = {
                     onDismiss()
                     mainViewModel.enqueueNext(song)
@@ -549,7 +579,7 @@ fun SongOptionsMenu(
 
         if (currentRoute?.startsWith("album_detail") != true) {
             DropdownMenuItem(
-                text = { Text("Ir a álbum") },
+                text = { Text(AppText.goAlbumOption) },
                 onClick = {
                     onDismiss()
                     song.albumId?.let { albumId ->
@@ -561,7 +591,7 @@ fun SongOptionsMenu(
 
         if (currentRoute?.startsWith("artist_detail") != true) {
             DropdownMenuItem(
-                text = { Text("Ir a artista") },
+                text = { Text(AppText.goArtistOption) },
                 onClick = {
                     onDismiss()
                     navController.navigate("artist_detail/${song.artist}")
@@ -571,7 +601,7 @@ fun SongOptionsMenu(
 
         if (currentRoute?.startsWith("playlist_detail") != true) {
             DropdownMenuItem(
-                text = { Text("Agregar a una playlist") },
+                text = { Text(AppText.addPlaylistOption) },
                 onClick = {
                     onDismiss()
                     showPlaylistDialog = true
@@ -581,27 +611,28 @@ fun SongOptionsMenu(
 
 
         DropdownMenuItem(
-            text = { Text("Editar etiqueta") },
+            text = { Text(AppText.editLabelOption) },
             onClick = {
                 onDismiss()
-                // Futuro: abrir pantalla de edición
+                mainViewModel.setEditingSong(song)
+                navController.navigate("edit_song")
             }
         )
 
         if (currentRoute?.startsWith("playlist_detail") != false) {
             DropdownMenuItem(
-                text = { Text("Eliminar de la playlist", color = Color.Red) },
+                text = { Text(AppText.deletePlaylistOption, color = Color.Red) },
                 onClick = {
                     onDismiss()
                     playlistViewModel.removeSongFromPlaylist(playlistName.toString(), song)
                     playlistViewModel.reloadPlaylistDetails(navController, playlistName.toString())
-                    toast.showCustomToast(context, "Canción eliminada de la playlist", false)
+                    toast.showCustomToast(context, AppText.deletedSongToast, false)
                 }
             )
         }
 
         DropdownMenuItem(
-            text = { Text("Eliminar del dispositivo", color = Color.Red) },
+            text = { Text(AppText.deleteDeviceOption, color = Color.Red) },
             onClick = {
                 onDismiss()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -609,7 +640,7 @@ fun SongOptionsMenu(
                 } else {
                     Toast.makeText(
                         context,
-                        "Eliminar solo disponible en Android 11+",
+                        AppText.deleteDevice11Option,
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -621,7 +652,7 @@ fun SongOptionsMenu(
     if (showPlaylistDialog) {
         AlertDialog(
             onDismissRequest = { showPlaylistDialog = false },
-            title = { Text("Selecciona una Playlist") },
+            title = { Text(AppText.selectPlaylistOption) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     playlists.forEach { playlist ->
@@ -677,6 +708,19 @@ fun <T> AlphabetScrollbar(
                     }
             )
         }
+    }
+}
+
+@Composable
+fun rememberSongArtwork(context: Context, song: Song?): Any? {
+    val embeddedBytes by produceState<ByteArray?>(initialValue = null, song) {
+        value = song?.let { loadEmbeddedPictureBytes(context, it.uri) }
+    }
+
+    return when {
+        embeddedBytes != null -> embeddedBytes
+        song?.albumArtUri != null -> song.albumArtUri
+        else -> null
     }
 }
 

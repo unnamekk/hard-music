@@ -1,5 +1,6 @@
 package com.example.hardemusic.gui.screens
 
+import android.util.Log
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import com.example.hardemusic.data.Album
+import com.example.hardemusic.data.AppText
 import com.example.hardemusic.data.Song
 import com.example.hardemusic.gui.SongOptionsMenu
 import com.example.hardemusic.viewmodel.MainViewModel
@@ -58,6 +60,7 @@ fun AlbumDetailScreen(
 ) {
     val scrollState = rememberScrollState()
     val currentSong by mainViewModel.currentSong.collectAsState()
+
 
     Column(
         modifier = Modifier
@@ -120,14 +123,13 @@ fun AlbumDetailScreen(
         ) {
             Icon(imageVector = Icons.Default.Shuffle, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Reproducir Aleatoriamente")
+            Text(AppText.shuffelAlbumButton)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
 
         val orderedSongs = songs.sortedBy { it.trackNumber ?: Int.MAX_VALUE }
-
 
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
