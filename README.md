@@ -41,7 +41,7 @@ HardMusic es una aplicación móvil desarrollada para Android que permite a los 
 ## 📥 Descarga
 
 <p align="center">
-  <a href="https://github.com/unnamekk/hard-music/releases/download/HardMusic 1.0/app-release.apk">
+  <a href="https://github.com/unnamekk/hard-music/releases/download/Release/app-release.apk">
     <img src="https://img.shields.io/github/v/release/unnamekk/hard-music?label=Descargar%20APK&style=for-the-badge&logo=android" alt="Descargar APK" />
   </a>
 </p>
