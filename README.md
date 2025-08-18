@@ -1,5 +1,17 @@
-## 🎵 Reproductor de Música para Android
-Reproductor de Música es una aplicación móvil desarrollada para Android que permite a los usuarios disfrutar de su biblioteca musical de forma sencilla, rápida y elegante. Diseñada con una interfaz intuitiva y moderna, esta app brinda una experiencia fluida para reproducir, organizar y explorar canciones almacenadas localmente en el dispositivo.
+
+<!-- Banner principal -->
+<p align="center">
+  <img src="https://github.com/unnamekk/hard-music/blob/master/Banner%20-%20HardMusic.jpg" alt="Banner Reproductor de Música" width="100%" />
+</p>
+
+## 🎵 HardMusic para Android
+HardMusic es una aplicación móvil desarrollada para Android que permite a los usuarios disfrutar de su biblioteca musical de forma sencilla, rápida y elegante. Diseñada con una interfaz intuitiva y moderna, esta app brinda una experiencia fluida para reproducir, organizar y explorar canciones almacenadas localmente en el dispositivo.
+
+<p align="center">
+  <a href="https://github.com/unnamekk/hard-music/releases/download/Release/app-release.apk">
+    <img src="https://img.shields.io/github/v/release/unnamekk/hard-music?label=Descargar%20APK&style=for-the-badge&logo=android" alt="Descargar APK" />
+  </a>
+</p>
 
 ## ✨ Características Principales
 
@@ -12,16 +24,14 @@ Reproductor de Música es una aplicación móvil desarrollada para Android que p
 - 🎁 Permite tagear tu propia música y editar nombres de canciones.
 - 🌐 Cambio de idioma dinámico (Español / Inglés) que se guarda en la configuración.
 - ⚙️ Configuración de exclusión de audios de WhatsApp.
-- 🖼️ Visualización de portadas de álbumes y secciones de sugerencias.
 - 👤 Gestión de perfil: foto de usuario y nombre editable.
 
 ## 🛠️ Tecnologías Utilizadas
 
 - Lenguaje: Kotlin
 - IDE: Android Studio
-- Persistencia: SharedPreferences para configuración, Room para almacenamiento de música (opcional)
+- Persistencia: SharedPreferences para configuración y creacion de archivos JSON.
 - UI: Jetpack Compose
-- Reproducción de audio: MediaSessionCompat, AudioManager, Notification Channels
 
 ## 📱 Requisitos
 
@@ -34,15 +44,6 @@ Reproductor de Música es una aplicación móvil desarrollada para Android que p
 - Funcionalidades principales desarrolladas: reproducción, navegación por álbumes y artistas, listas de reproducción, notificaciones, cambio de idioma, edición de perfil.
 - Funcionalidades especiales desarrolladas: editor de etiquetas avanzado y ajustes adicionales de la app.
 
-## 🚀 Cómo Usar
 
-1. Clonar el repositorio.
-2. Abrir el proyecto en Android Studio.
-3. Conceder permisos de almacenamiento y notificaciones al iniciar la app.
-4. Explorar tus canciones, crear playlists, y disfrutar de la música con controles desde la pantalla de bloqueo.
 
-## 📌 Notas
 
-- Todos los textos de la app cambian dinámicamente según el idioma seleccionado en Settings.
-- Los cambios de idioma y preferencias se guardan automáticamente y se cargan al reiniciar la app.
-- La app soporta reproducción de audio mientras se usa otra app o cuando la pantalla está apagada.
