@@ -7,6 +7,12 @@
 ## 🎵 HardMusic para Android
 HardMusic es una aplicación móvil desarrollada para Android que permite a los usuarios disfrutar de su biblioteca musical de forma sencilla, rápida y elegante. Diseñada con una interfaz intuitiva y moderna, esta app brinda una experiencia fluida para reproducir, organizar y explorar canciones almacenadas localmente en el dispositivo.
 
+<p align="center">
+  <a href="https://github.com/unnamekk/hard-music/releases/download/Release/app-release.apk">
+    <img src="https://img.shields.io/github/v/release/unnamekk/hard-music?label=Descargar%20APK&style=for-the-badge&logo=android" alt="Descargar APK" />
+  </a>
+</p>
+
 ## ✨ Características Principales
 
 - 🎧 Reproducción de audio en segundo plano con control desde la notificación y pantalla de bloqueo.
@@ -38,11 +44,6 @@ HardMusic es una aplicación móvil desarrollada para Android que permite a los 
 - Funcionalidades principales desarrolladas: reproducción, navegación por álbumes y artistas, listas de reproducción, notificaciones, cambio de idioma, edición de perfil.
 - Funcionalidades especiales desarrolladas: editor de etiquetas avanzado y ajustes adicionales de la app.
 
-## 📥 Descarga
 
-<p align="center">
-  <a href="https://github.com/unnamekk/hard-music/releases/download/Release/app-release.apk">
-    <img src="https://img.shields.io/github/v/release/unnamekk/hard-music?label=Descargar%20APK&style=for-the-badge&logo=android" alt="Descargar APK" />
-  </a>
-</p>
+
 
