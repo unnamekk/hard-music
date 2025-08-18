@@ -1,7 +1,6 @@
 package com.example.hardemusic.gui.screens
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import com.example.hardemusic.gui.ScrollingText
 import com.example.hardemusic.gui.SongOptionsMenu
 import com.example.hardemusic.gui.rememberSongArtwork

@@ -110,7 +110,6 @@ fun AlbumsScreen(viewModel: AlbumsViewModel = viewModel(),onAlbumClick: (Album) 
             }
         }
 
-        // Barra lateral
         AlphabetScrollbar(
             groupedItems = grouped,
             listState = listState,

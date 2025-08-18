@@ -146,7 +146,7 @@ fun SettingsScreen(
 
         Button(
             onClick = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hard-music"))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/unnamekk/hard-music"))
                 context.startActivity(intent)
             },
             colors = ButtonDefaults.buttonColors(

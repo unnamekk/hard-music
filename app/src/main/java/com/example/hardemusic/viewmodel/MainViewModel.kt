@@ -17,7 +17,6 @@ import android.provider.MediaStore
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
 import androidx.activity.result.IntentSenderRequest
 import androidx.annotation.RequiresApi
 import androidx.core.content.edit
@@ -307,9 +306,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setEditingSong(song: Song) {
         val fullSong = _songs.value.find { it.uri == song.uri } ?: song
-
-        Log.e("setEditingSong", "AQUIIIIIIII Usando canción: albumArtist=${fullSong.albumArtist}, year=${fullSong.year}, track=${fullSong.trackNumber}")
-
         _editingSong.value = fullSong
     }
 
@@ -963,7 +959,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     context.showCustomToast(context, AppText.songSuccessToast, true)
                 }
             } else {
-                Log.w("UpdateSong", "Formato no soportado: $extension")
                 if (context is MainActivity) {
                     context.showCustomToast(context, AppText.notSupportedToast, false)
                 }
