@@ -1,7 +1,7 @@
 
 <!-- Banner principal -->
 <p align="center">
-  <img src="https://github.com/unnamekk/hard-music/blob/master/Banner%20-%20HardMusic.jpg" alt="Banner Reproductor de Música" width="100%" />
+  <img src="https://github.com/unnamekk/hard-music/blob/master/Banner%20-%20HardMusic.jpg" alt="Banner HardMusic" width="100%" />
 </p>
 
 ## 🎵 HardMusic para Android
@@ -11,6 +11,11 @@ HardMusic es una aplicación móvil desarrollada para Android que permite a los 
   <a href="https://github.com/unnamekk/hard-music/releases/download/Release/app-release.apk">
     <img src="https://img.shields.io/github/v/release/unnamekk/hard-music?label=Descargar%20APK&style=for-the-badge&logo=android" alt="Descargar APK" />
   </a>
+</p>
+
+## 📸 Algunas pantallas de la app
+<p align="center">
+  <img src="https://github.com/unnamekk/hard-music/blob/master/Screenshots%20-%20HardMusic.jpg" alt="Pantallas HardMusic" width="100%" />
 </p>
 
 ## ✨ Características Principales
