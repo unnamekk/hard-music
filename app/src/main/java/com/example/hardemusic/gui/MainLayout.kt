@@ -10,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,9 +28,12 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Mic
@@ -38,6 +42,7 @@ import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -96,7 +101,7 @@ fun MainLayout(viewModel: MainViewModel, navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val hideBottomBarRoutes = listOf("historial", "añadidos", "settings")
+    val hideBottomBarRoutes = listOf("historial", "añadidos", "settings","edit_song","edit_multiple_songs")
     val showBottomBar = currentRoute !in hideBottomBarRoutes
     val showTopBar = currentRoute !in hideBottomBarRoutes
 
@@ -136,7 +141,7 @@ fun MainLayout(viewModel: MainViewModel, navController: NavHostController) {
 
 
         if (showTopBar && topBarTitle != null) {
-            TopBar(title = topBarTitle, navController = navController)
+            TopBar(title = topBarTitle, navController = navController, viewModel = viewModel)
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -171,62 +176,197 @@ fun MainLayout(viewModel: MainViewModel, navController: NavHostController) {
 }
 
 @Composable
-fun TopBar(title: AnnotatedString, navController: NavHostController) {
+fun TopBar(
+    title: AnnotatedString,
+    navController: NavHostController,
+    viewModel: MainViewModel = viewModel()
+) {
+    val isSelectionMode by viewModel.isSelectionMode.collectAsState()
+    val selectedSongs by viewModel.selectedSongs.collectAsState()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 16.dp, horizontal = 16.dp)
+    ) {
+        if (isSelectionMode) {
+            Row(
+                modifier = Modifier.align(Alignment.CenterStart),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Cancelar selección",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { viewModel.clearSelection() }
+                )
+            }
+
+            Text(
+                text = "${selectedSongs.size}",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.Center)
+            )
+
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Editar",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            if (selectedSongs.isNotEmpty()) {
+                                viewModel.setEditingSongs(selectedSongs)
+                                navController.navigate("edit_multiple_songs")
+                            }
+                        }
+                )
+                Icon(
+                    imageVector = Icons.Default.SelectAll,
+                    contentDescription = "Seleccionar todo",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            viewModel.selectAll(viewModel._songs.value)
+                        }
+                )
+            }
+        } else {
+            Row(
+                modifier = Modifier.align(Alignment.CenterStart),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Buscar",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { navController.navigate("search") }
+                )
+            }
+
+            Text(
+                text = title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.Center)
+            )
+
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarToday,
+                    contentDescription = "Calendario",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { navController.navigate("calendar") }
+                )
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Ajustes",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable { navController.navigate("settings") }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailTopBar(
+    title: String,
+    navController: NavController,
+    mainViewModel: MainViewModel,
+    songs: List<Song>,
+    onBack: () -> Unit
+) {
+    val isSelectionMode by mainViewModel.isSelectionMode.collectAsState()
+    val selectedSongs by mainViewModel.selectedSongs.collectAsState()
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp, horizontal = 16.dp)
     ) {
         Row(
             modifier = Modifier.align(Alignment.CenterStart),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Buscar",
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Atrás",
                 tint = Color.White,
                 modifier = Modifier
                     .size(24.dp)
-                    .clickable {
-                        navController.navigate("search")
-                    }
+                    .clickable { onBack() }
             )
         }
 
         Text(
-            text = title,
+            text = if (isSelectionMode) "${selectedSongs.size}" else title,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             modifier = Modifier.align(Alignment.Center)
         )
 
-
         Row(
             modifier = Modifier.align(Alignment.CenterEnd),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.CalendarToday,
-                contentDescription = "Calendario",
-                tint = Color.White,
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable {
-                        navController.navigate("calendar")
-                    }
-            )
+            if (isSelectionMode) {
+                Icon(
+                    imageVector = Icons.Default.SelectAll,
+                    contentDescription = "Seleccionar todo",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            mainViewModel.selectAll(songs)
+                        }
+                )
 
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "Ajustes",
-                tint = Color.White,
-                modifier = Modifier
-                    .size(24.dp)
-                    .clickable {
-                        navController.navigate("settings")
-                    }
-            )
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Editar",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            if (selectedSongs.isNotEmpty()) {
+                                mainViewModel.setEditingSongs(selectedSongs)
+                                navController.navigate("edit_multiple_songs")
+                            }
+                        }
+                )
+
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Salir selección",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clickable {
+                            mainViewModel.clearSelection()
+                        }
+                )
+            }
         }
     }
 }
@@ -464,7 +604,9 @@ fun SongRow(
     mainViewModel: MainViewModel
 ) {
     val hasNowPlayingBarAppeared by mainViewModel.hasNowPlayingBarAppeared.collectAsState()
-    val currentSong by mainViewModel.currentSong.collectAsState()
+
+    val selectedSongs by mainViewModel.selectedSongs.collectAsState()
+    val isSelectionMode by mainViewModel.isSelectionMode.collectAsState()
 
     val painter = rememberAsyncImagePainter(
         model = ImageRequest.Builder(LocalContext.current)
@@ -477,7 +619,7 @@ fun SongRow(
             .build()
     )
 
-    val isSelected = currentSong?.uri == song.uri
+    val isSelected = selectedSongs.contains(song)
 
     val backgroundColor by animateColorAsState(
         if (isSelected) Color(0x502D5DFF) else Color.Transparent,
@@ -490,9 +632,21 @@ fun SongRow(
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
             .padding(vertical = 8.dp, horizontal = 12.dp)
-            .clickable { onSongClick(song) },
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionMode) {
+                        mainViewModel.toggleSelection(song)
+                    } else {
+                        onSongClick(song)
+                    }
+                },
+                onLongClick = {
+                    mainViewModel.startSelection(song)
+                }
+            )
+            .padding(vertical = 8.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
-    ) {
+    )  {
         Image(
             painter = painter,
             contentDescription = "Carátula",

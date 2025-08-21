@@ -2,6 +2,8 @@ package com.example.hardemusic.gui.screens
 
 import android.content.Context
 import android.media.MediaMetadataRetriever
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.BackHandler
@@ -11,6 +13,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,12 +36,14 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,8 +79,13 @@ import com.example.hardemusic.data.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
 import java.io.File
 import kotlin.random.Random
+import androidx.compose.foundation.lazy.items
+import com.example.hardemusic.MainActivity
 
 
 @RequiresApi(Build.VERSION_CODES.R)
@@ -123,9 +134,13 @@ fun EditSongScreen(
     var albumYearField by remember { mutableStateOf(song.year?.toString() ?: "") }
     var trackNumber by remember { mutableStateOf(song.trackNumber?.toString() ?: "") }
 
+
     val embeddedBytes by produceState<ByteArray?>(initialValue = null, key1 = song.uri) {
         value = loadEmbeddedPictureBytes(context, song.uri)
     }
+
+    var searchResults by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -190,39 +205,112 @@ fun EditSongScreen(
 
                 Spacer(Modifier.height(8.dp))
 
-                val imageModel: Any? = if (useAlbumArt) {
-                    selectedAlbum?.albumArtUri
-                } else {
-                    embeddedBytes
+                val imageModel: Any? = when {
+                    albumArtUri != null -> albumArtUri
+                    useAlbumArt -> selectedAlbum?.albumArtUri
+                    else -> embeddedBytes
                 }
 
-                if (imageModel != null) {
-                    AsyncImage(
-                        model = imageModel,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(150.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
-                            .clickable { pickImageLauncher.launch("image/*") },
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(150.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
-                            .clickable { pickImageLauncher.launch("image/*") },
-                        contentAlignment = Alignment.Center
+                val scope = rememberCoroutineScope()
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (imageModel != null) {
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(150.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
+                                .clickable { pickImageLauncher.launch("image/*") },
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(150.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
+                                .clickable { pickImageLauncher.launch("image/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
+                    }
+                    val toast = MainActivity()
+                    Button(
+                        onClick = {
+
+                            if (!isInternetAvailable(context)) {
+                                toast.showCustomToast(context, "Se requiere conexión a Internet", false)
+                                return@Button
+                            }
+
+                            scope.launch {
+                                val results = CoverArtService.searchCovers(
+                                    artist = artists.firstOrNull() ?: "",
+                                    album = albumFieldText
+                                )
+                                searchResults = results
+                                showDialog = results.isNotEmpty()
+                            }
+                        },
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF1B5E20),
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier.wrapContentWidth()
                     ) {
                         Icon(
-                            Icons.Default.MusicNote,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(64.dp)
+                            Icons.Default.Search,
+                            contentDescription = "Buscar carátula",
+                            tint = Color.White
                         )
+                        Spacer(Modifier.width(6.dp))
+                        Text(AppText.searchOnlineButton)
                     }
+                }
+
+                if (showDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        title = { Text("Selecciona una carátula") },
+                        text = {
+                            LazyColumn {
+                                items(searchResults) { url ->
+                                    AsyncImage(
+                                        model = url,
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(200.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .clickable {
+                                                scope.launch {
+                                                    val tempUri =
+                                                        saveImageFromUrlToCache(context, url)
+                                                    if (tempUri != null) {
+                                                        albumArtUri = tempUri
+                                                    }
+                                                    showDialog = false
+                                                }
+                                            },
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                }
+                            }
+                        },
+                        confirmButton = {}
+                    )
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -263,6 +351,8 @@ fun EditSongScreen(
                     colors = textFieldColors()
                 )
 
+
+
                 Spacer(Modifier.height(16.dp))
                 Text(AppText.artistsLabelTitle, color = Color.Cyan)
             }
@@ -271,21 +361,36 @@ fun EditSongScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextField(
                         value = artist,
-                        onValueChange = { newValue -> artists = artists.toMutableList().also { it[index] = newValue } },
+                        onValueChange = { newValue ->
+                            artists = artists.toMutableList().also { it[index] = newValue }
+                        },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         colors = textFieldColors()
                     )
 
+
                     if (artists.size > 1) {
-                        IconButton(onClick = { artists = artists.toMutableList().also { it.removeAt(index) } }) {
-                            Icon(Icons.Default.Close, contentDescription = "Eliminar artista", tint = Color.Red)
+                        IconButton(onClick = {
+                            artists = artists.toMutableList().also { it.removeAt(index) }
+                        }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Eliminar artista",
+                                tint = Color.Red
+                            )
                         }
                     }
 
                     if (index == artists.lastIndex) {
-                        IconButton(onClick = { artists = artists.toMutableList().apply { add("") } }) {
-                            Icon(Icons.Default.Add, contentDescription = "Agregar artista", tint = Color.White)
+                        IconButton(onClick = {
+                            artists = artists.toMutableList().apply { add("") }
+                        }) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Agregar artista",
+                                tint = Color.White
+                            )
                         }
                     }
                 }
@@ -295,21 +400,34 @@ fun EditSongScreen(
             item {
                 Spacer(Modifier.height(8.dp))
                 Text(AppText.albumLabelTitle, color = Color.Cyan)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     TextField(
                         value = albumFieldText,
-                        onValueChange = { newText -> albumFieldText = newText; selectedAlbum = null },
-                        modifier = Modifier.weight(1f).padding(end = 8.dp),
+                        onValueChange = { newText ->
+                            albumFieldText = newText; selectedAlbum = null
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp),
                         singleLine = true,
                         colors = textFieldColors()
                     )
 
                     if (artistAlbums.isNotEmpty()) {
                         IconButton(onClick = { showAlbumMenu = true }) {
-                            Icon(Icons.Default.Album, contentDescription = "Elegir álbum", tint = Color.White)
+                            Icon(
+                                Icons.Default.Album,
+                                contentDescription = "Elegir álbum",
+                                tint = Color.White
+                            )
                         }
 
-                        DropdownMenu(expanded = showAlbumMenu, onDismissRequest = { showAlbumMenu = false }) {
+                        DropdownMenu(
+                            expanded = showAlbumMenu,
+                            onDismissRequest = { showAlbumMenu = false }) {
                             artistAlbums.forEach { album ->
                                 DropdownMenuItem(
                                     text = { Text(album.name) },
@@ -371,6 +489,14 @@ private fun textFieldColors() = TextFieldDefaults.colors(
     unfocusedIndicatorColor = Color.Gray
 )
 
+fun isInternetAvailable(context: Context): Boolean {
+    val connectivityManager =
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val network = connectivityManager.activeNetwork ?: return false
+    val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+}
+
 enum class EditMode { NO_CHANGE, NEW }
 
 data class MultiEditField<T>(
@@ -385,6 +511,8 @@ private fun <T> MultiEditField<T>.orKeep(current: T): T {
 private fun <T> MultiEditField<T>.orKeepNullable(current: T?): T? {
     return if (mode == EditMode.NEW) (value ?: current) else current
 }
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -601,7 +729,7 @@ fun <T> FieldWithModeSelector(
 
                     val nonNullValues = existingValues.filterNotNull().distinct()
                     if (nonNullValues.isNotEmpty()) {
-                        Divider()
+                        HorizontalDivider()
                         nonNullValues.forEach { v ->
                             DropdownMenuItem(
                                 text = { Text(display(v)) },
@@ -644,6 +772,8 @@ fun ImageFieldWithModeSelector(
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    var searchResults by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showDialog by remember { mutableStateOf(false) }
 
     Column {
         Text(label, color = Color.White, style = MaterialTheme.typography.titleMedium)
@@ -670,9 +800,10 @@ fun ImageFieldWithModeSelector(
                         }
                     )
 
+
                     val nonNullAlbumArt = albumArtUris.filterNotNull().distinct()
                     if (nonNullAlbumArt.isNotEmpty()) {
-                        Divider()
+                        HorizontalDivider()
                         nonNullAlbumArt.forEach { uri ->
                             DropdownMenuItem(
                                 text = {
@@ -696,7 +827,7 @@ fun ImageFieldWithModeSelector(
 
                     val songsWithIndex = songsForPreview
                     if (songsWithIndex.isNotEmpty()) {
-                        Divider()
+                        HorizontalDivider()
                         songsWithIndex.forEach { (title, songUri) ->
                             val embeddedBytes by produceState<ByteArray?>(
                                 initialValue = null,
@@ -791,4 +922,47 @@ suspend fun writeBytesToTempImageUri(
         File.createTempFile("${prefix}_${System.currentTimeMillis()}", ".jpg", context.cacheDir)
     tmp.outputStream().use { it.write(bytes) }
     Uri.fromFile(tmp)
+}
+
+object CoverArtService {
+    private val client = OkHttpClient()
+
+    suspend fun searchCovers(artist: String, album: String): List<String> {
+        val url = "https://itunes.apple.com/search?term=${artist}+${album}&entity=album"
+        val request = Request.Builder().url(url).build()
+
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute().use { response ->
+                val json = response.body?.string() ?: return@withContext emptyList()
+                val obj = JSONObject(json)
+                val results = obj.getJSONArray("results")
+                val covers = mutableListOf<String>()
+                for (i in 0 until results.length()) {
+                    val item = results.getJSONObject(i)
+                    val cover = item.getString("artworkUrl100")
+                        .replace("100x100", "600x600")
+                    covers.add(cover)
+                }
+                covers
+            }
+        }
+    }
+}
+
+suspend fun saveImageFromUrlToCache(context: Context, imageUrl: String): Uri? {
+    return withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder().url(imageUrl).build()
+            val client = OkHttpClient()
+            val response = client.newCall(request).execute()
+            val bytes = response.body?.bytes() ?: return@withContext null
+
+            val tempFile = File.createTempFile("cover_", ".jpg", context.cacheDir)
+            tempFile.outputStream().use { it.write(bytes) }
+
+            Uri.fromFile(tempFile)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

@@ -3,6 +3,7 @@ package com.example.hardemusic.gui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,6 +68,18 @@ fun SettingsScreen(
             .background(Color.Black)
             .padding(16.dp)
     ) {
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = "Atrás",
+            tint = Color.White,
+            modifier = Modifier
+                .size(24.dp)
+                .clickable { navController.popBackStack() }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = AppText.SettingsTitle,
             fontSize = 24.sp,

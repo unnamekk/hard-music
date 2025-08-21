@@ -98,10 +98,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedSongsForDay = MutableStateFlow<List<Song>>(emptyList())
     val selectedSongsForDay = _selectedSongsForDay.asStateFlow()
 
+    private val _selectedSongs = MutableStateFlow<List<Song>>(emptyList())
+    val selectedSongs = _selectedSongs.asStateFlow()
+
+    private val _isSelectionMode = MutableStateFlow(false)
+    val isSelectionMode = _isSelectionMode.asStateFlow()
+
     private val _recentSongs = MutableStateFlow<List<Song>>(emptyList())
     val recentSongs: StateFlow<List<Song>> = _recentSongs
 
-    private val _songs = MutableStateFlow<List<Song>>(emptyList())
+    val _songs = MutableStateFlow<List<Song>>(emptyList())
 
     private var currentAlbumSongs: List<Song> = emptyList()
 
@@ -204,6 +210,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _language.value = langCode
         AppText.language = langCode
         preferences.edit().putString("language", langCode).apply()
+    }
+
+    fun toggleSelection(song: Song) {
+        val current = _selectedSongs.value.toMutableList()
+        if (current.contains(song)) {
+            current.remove(song)
+        } else {
+            current.add(song)
+        }
+        _selectedSongs.value = current
+        _isSelectionMode.value = current.isNotEmpty()
+    }
+
+    fun startSelection(song: Song) {
+        if (!_isSelectionMode.value) {
+            _isSelectionMode.value = true
+            _selectedSongs.value = listOf(song)
+        }
+    }
+
+    fun clearSelection() {
+        _selectedSongs.value = emptyList()
+        _isSelectionMode.value = false
+    }
+
+    fun selectAll(songs: List<Song>) {
+        _selectedSongs.value = songs
+        _isSelectionMode.value = songs.isNotEmpty()
     }
 
     fun loadSongs() {
@@ -972,6 +1006,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             if (context is MainActivity) {
                 context.showCustomToast(context, AppText.errorUpdateToast, false)
+                context.showCustomToast(context, "${AppText.errorUpdateToast}: ${e.localizedMessage}", false)
             }
         }
     }
