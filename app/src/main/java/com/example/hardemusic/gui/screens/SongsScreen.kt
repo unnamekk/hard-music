@@ -13,6 +13,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -31,6 +32,12 @@ import com.example.hardemusic.viewmodel.MainViewModel
 fun SongsScreen(viewModel: MainViewModel, navController: NavController) {
     val songs by viewModel.songsList.collectAsState()
     val sortedSongs = songs.sortedBy { it.title }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearSelection()
+        }
+    }
 
     val grouped = remember(sortedSongs) {
         sortedSongs.groupBy {

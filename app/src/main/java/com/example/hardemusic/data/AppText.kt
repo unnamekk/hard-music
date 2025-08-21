@@ -218,6 +218,12 @@ object AppText {
     val errorUpdatesToast: String
         get() = if (language == "Es") "Error al actualizar canciones" else "Error updating songs"
 
+    val searchOnlineButton: String
+        get() = if (language == "Es") "Buscar online" else "Search online"
+
+    val calendarTitle: String
+        get() = if (language == "Es") "Calendario" else "Calendar"
+
     val english: String
         get() = if (language == "Es") "Ingles" else "English"
 

@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +50,7 @@ import com.example.hardemusic.data.Album
 import com.example.hardemusic.data.AppText
 import com.example.hardemusic.data.Song
 import com.example.hardemusic.gui.AlphabetScrollbar
+import com.example.hardemusic.gui.DetailTopBar
 import com.example.hardemusic.gui.ScrollingText
 import com.example.hardemusic.gui.SongRow
 import com.example.hardemusic.viewmodel.AlbumsViewModel
@@ -69,6 +71,13 @@ fun ArtistDetailScreen(
     navController: NavHostController,
     onBack: () -> Unit
 ) {
+
+    DisposableEffect(Unit) {
+        onDispose {
+            mainViewModel.clearSelection()
+        }
+    }
+
     val allSongs by mainViewModel.songsList.collectAsState()
     val allAlbums by albumsViewModel.albums.collectAsState()
 
@@ -115,13 +124,13 @@ fun ArtistDetailScreen(
             .background(Color(0xFF121212))
             .padding(16.dp)
     ) {
-        IconButton(onClick = onBack) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Volver",
-                tint = Color.White
-            )
-        }
+        DetailTopBar(
+            title = artistName,
+            navController = navController,
+            mainViewModel = mainViewModel,
+            songs = songs,
+            onBack = onBack
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
